@@ -1,7 +1,7 @@
 """
     calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
-Just computes the magnification map.
+Just computes the magnification map on range `r`.
 """
 function range_calc_mag(r::UnitRange{Int}, P::NumMLProblem, 
                            domain::Cell, image::Cell)
