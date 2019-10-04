@@ -23,6 +23,7 @@ module Microlensing
     include("grids-and-cells.jl")
     include("cell-trees.jl")
     include("magnification.jl")
+    include("parallel-magnification.jl")
     include("caustics.jl")
 
 end # module
