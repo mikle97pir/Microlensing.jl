@@ -17,12 +17,13 @@ module Microlensing
     import StatsBase: params
 
     export Star, Power, Cell, NumMLProblem
-    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag, calc_crit_curves, calc_caustics, parallel_calc_mag
+    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag, calc_crit_curves, calc_caustics, range_calc_mag
 
     include("star-field/star-field.jl")
     include("grids-and-cells.jl")
     include("cell-trees.jl")
     include("magnification.jl")
+    include("parallel-magnification.jl")
     include("caustics.jl")
 
 end # module
