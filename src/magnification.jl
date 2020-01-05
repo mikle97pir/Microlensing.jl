@@ -178,9 +178,20 @@ end
 
 
 """
+    normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
+Normalizes the magnification map in such a way that magnification is equal to 1 on the infinity.
+"""
+function normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
+    nrays = P.ngrid^2*P.nshare^2*P.nint^2
+    mult = nrays/(P.resol^2)*(image.size^2/domain.size^2)*(1/abs(P.Λ))
+    return mag/mult
+end
+
+
+"""
     calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
-Just computes the magnification map.
+Just computes the magnification map. Output is normalized in such a way that the magnification is equal to 1 at the infinity.
 """
 function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
@@ -234,5 +245,6 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
             fill!(int_near_sums, 0)
         end
     end
-    return mag
+    norm_mag = normalize_mag(mag, P, domain, image)
+    return norm_mag
 end
