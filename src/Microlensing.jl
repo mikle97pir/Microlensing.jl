@@ -17,7 +17,7 @@ module Microlensing
     import StatsBase: params
 
     export Star, Power, Cell, NumMLProblem
-    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag, calc_crit_curves, calc_caustics, range_calc_mag
+    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag, evaluate_mass_homotopy, evaluate_homotopy, range_calc_mag
 
     include("star-field/star-field.jl")
     include("grids-and-cells.jl")
