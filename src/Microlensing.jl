@@ -8,6 +8,7 @@ module Microlensing
     using Distributions
     using Random
     using LinearAlgebra: dot
+    using ProgressMeter
 
     #### for distributions.jl
     using Distributions: @check_args, @distr_support
