@@ -115,6 +115,7 @@ function create_homotopy(masses, coords, E, Λ)
     return G, ∂tG, ∂sG, ∂ttG, ∂tsG
 end
 
+mass_lim_func(t0, s0, rate) = (2/3)*rate*s0
 
 function evaluate_mass_homotopy(masses, coords, E, Λ, Δs=1e-6, rate=0.5)
     mass_FD = create_mass_homotopy(masses, coords, E, Λ)
