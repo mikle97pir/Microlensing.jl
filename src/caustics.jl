@@ -5,11 +5,12 @@ function simple_newton(f, ∂f, init)
         T_prev = T
         T = T_prev - f(T_prev)/∂f(T_prev)
         if isnan(T)
-            throw(ErrorException)
+            error("The Newton method diverged. Try to decrease Δs, decrease rate or increase nsteps. You may also try another root finder.")
         end
     end
     return T
 end
+
 
 function find_corrections(masses, coords, Δs, E, Λ)
     inv_sums = [sum([1/(a - b) for b in coords if b != a]) for a in coords]
@@ -48,7 +49,7 @@ end
 
 function auto_homotopy_step(t0, s0, FD, rate, lim_func, find_root)
     F, ∂tF, ∂sF, ∂ttF, ∂tsF = FD
-    Δs = rate*abs2(∂tF(t0, s0)) / abs(∂ttF(t0, s0)) / abs(∂sF(t0, s0))
+    Δs = 2*rate*abs2(∂tF(t0, s0)) / abs(∂ttF(t0, s0)) / abs(∂sF(t0, s0))
      if Δs > lim_func(t0, s0, rate)
          Δs = lim_func(t0, s0, rate)
      end
@@ -127,27 +128,55 @@ function evaluate_mass_homotopy(masses, coords, E, Λ, Δs=1e-6, rate=0.25, find
 end
 
 
-function evaluate_homotopy(roots, masses, coords, E, Λ, nsteps=100, rate=0.25, find_root=simple_newton)
+function evaluate_homotopy(roots, masses, coords, E, Λ, rate=0.25, nsteps=200, find_root=simple_newton)
     FD = create_homotopy(masses, coords, E, Λ)
     crit_curves = Vector{Vector{Complex{Float64}}}(undef, 0)
     lim_func(t0, s0, rate) = 2π / nsteps
     @showprogress 1 "Evaluating homotopy..." for root in roots
         t_list = Vector{Complex{Float64}}(undef, 0)
         s_list = Vector{Float64}(undef, 0)
-        homotopize_and_remember!(t_list, s_list, root, 0., 2π, FD, 0.1, lim_func, find_root)
+        homotopize_and_remember!(t_list, s_list, root, 0., 2π, FD, rate, lim_func, find_root)
         push!(crit_curves, t_list)
     end
     return crit_curves
 end
 
 
-function check_mass_homotopy(roots)
-    for i in 1:length(roots)
-        for j in (i+1):length(roots)
-            if roots[i]≈roots[j]
-                println("bad pair of roots: ")
-                @show (i, j)
+function check_for_duplicates(array)
+    for i in 1:length(array)
+        for j in (i+1):length(array)
+            if array[i] ≈ array[j]
+                return true
             end
         end
     end
+    return false
+end 
+
+
+function duplicate_warning_crit_curves(crit_curves)
+    last_points = [pop!(curve) for curve in crit_curves]
+    if check_for_duplicates(last_points)
+        @warn "Some roots stuck together, and the algorithm missed some critical curves. Try to decrease rate. You may also increase nsteps."
+    end
+    return nothing
 end
+
+
+function duplicate_warning_roots(roots)
+    if check_for_duplicates(roots)
+        @warn "Some roots stuck together. Try to decrease rate."
+    end
+    return nothing
+end
+
+
+function find_crit_curves(masses, coords, E, Λ, Δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+    roots = evaluate_mass_homotopy(masses, coords, E, Λ, Δs, rate, find_root)
+    duplicate_warning_roots(roots)
+    crit_curves = evaluate_homotopy(roots, masses, coords, E, Λ, rate, nsteps, find_root)
+    duplicate_warning_crit_curves(crit_curves)
+    return crit_curves
+end
+
+
