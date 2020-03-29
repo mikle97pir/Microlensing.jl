@@ -155,7 +155,7 @@ end
 
 
 function duplicate_warning_crit_curves(crit_curves)
-    last_points = [pop!(curve) for curve in crit_curves]
+    last_points = [last(curve) for curve in crit_curves]
     if check_for_duplicates(last_points)
         @warn "Some roots stuck together, and the algorithm missed some critical curves. Try to decrease rate. You may also increase nsteps."
     end
@@ -179,4 +179,20 @@ function find_crit_curves(masses, coords, E, Λ, Δs=1e-6, rate=0.25, nsteps=200
     return crit_curves
 end
 
+
+function calc_caustics(masses, coords, E, Λ, crit_curves)
+    caustics = Vector{Vector{Complex{Float64}}}(undef, 0)
+    @showprogress 1 "Computing caustics..." for curve in crit_curves
+        caustic = similar(curve)
+        @showprogress 1 "Computing points on a caustic..." for (j, point) in enumerate(curve)
+            res = A(E, Λ)*point + B(E, Λ)*conj(point)
+            for k in 1:length(masses)
+                res -= masses[k]*(point-coords[k])/abs2(point-coords[k])
+            end
+            caustic[j] = res
+        end
+        push!(caustics, caustic)
+    end
+    return caustics
+end
 
