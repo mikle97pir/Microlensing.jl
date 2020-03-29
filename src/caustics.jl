@@ -171,7 +171,7 @@ function duplicate_warning_roots(roots)
 end
 
 
-function find_crit_curves(masses, coords, E, Λ, Δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+function calc_crit_curves(masses, coords, E, Λ, Δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
     roots = evaluate_mass_homotopy(masses, coords, E, Λ, Δs, rate, find_root)
     duplicate_warning_roots(roots)
     crit_curves = evaluate_homotopy(roots, masses, coords, E, Λ, rate, nsteps, find_root)
