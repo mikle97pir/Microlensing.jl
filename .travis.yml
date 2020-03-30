@@ -1,3 +1,14 @@
+language: julia
+
+os:
+  - linux
+  - osx
+
+julia:
+  - 1.0
+  - 1.4
+  - nightly
+
 jobs:
   include:
     - stage: "Documentation"
