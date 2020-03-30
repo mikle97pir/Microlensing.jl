@@ -18,24 +18,24 @@ end
 
 
 """
-    find_corrections(masses, coords, δs, E, Λ)
+    find_corrections(masses, positions, δs, E, Λ)
 
 Finds the approximate positions of the `2*nstars` roots of the jacobian, when all the masses are multiplied by a small number `δs`. The output arrays `init1` and `init2` should be used for the function [`find_start_roots`](@ref).
 
 See also: [`calc_crit_curves`](@ref).
 """
-function find_corrections(masses, coords, δs, E, Λ)
-    inv_sums = [sum([1/(a - b) for b in coords if b != a]) for a in coords]
+function find_corrections(masses, positions, δs, E, Λ)
+    inv_sums = [sum([1/(a - b) for b in positions if b != a]) for a in positions]
     U = δs*masses .* inv_sums/C(0, E, Λ)
     V = -δs*masses/(2*C(0, E, Λ))
-    init1 = coords .- U .+ sqrt.(U.^2 .- 2*V) 
-    init2 = coords .- U .- sqrt.(U.^2 .- 2*V)
+    init1 = positions .- U .+ sqrt.(U.^2 .- 2*V) 
+    init2 = positions .- U .- sqrt.(U.^2 .- 2*V)
     return init1, init2
 end
 
 
 """
-    find_start_roots(mass_FD, coords, init1, init2, δs, find_root)
+    find_start_roots(mass_FD, positions, init1, init2, δs, find_root)
 
 Finds the exact positions of the `2*nstars` roots of the jacobian, when all the masses are multiplied by a small number `δs`. The `init1` and `init2` initial approximations should be computed by the function [`find_corrections`](@ref). 
 
@@ -43,11 +43,11 @@ Finds the exact positions of the `2*nstars` roots of the jacobian, when all the 
 
 See also: [`calc_crit_curves`](@ref).
 """
-function find_start_roots(mass_FD, coords, init1, init2, δs, find_root)
+function find_start_roots(mass_FD, positions, init1, init2, δs, find_root)
     H, ∂tH, ∂sH, ∂ttH, ∂tsH = mass_FD
     f(t) = H(t, δs)
     ∂f(t) = ∂tH(t, δs)
-    nstars = length(coords)
+    nstars = length(positions)
     start_roots = zeros(Complex{Float64}, 2*nstars)
     @showprogress 1 "Searching for start roots..." for i in 1:nstars
         start_roots[2i-1] = find_root(f, ∂f, init1[i])
@@ -147,34 +147,34 @@ C(φ, E, Λ) = A(E, Λ)*exp(im*φ) - B(E, Λ)
 
 
 """
-    create_mass_homotopy(masses, coords, E, Λ)
+    create_mass_homotopy(masses, positions, E, Λ)
 
 Returns the tuple `mass_FD` containing the mass-changing homotopy `H` and its derivatives `∂tH, ∂sH, ∂ttH, ∂tsH`.
 
 See also: [`calc_crit_curves`](@ref).
 """
-function create_mass_homotopy(masses, coords, E, Λ)
-    H(t, s) = dot(s*masses, 1 ./ (t .- coords).^2) - C(0, E, Λ)
-    ∂tH(t, s) = -2*dot(s*masses, 1 ./ (t .- coords).^3)
-    ∂sH(t, s) = dot(masses, 1 ./ (t .- coords).^2)
-    ∂ttH(t, s) = 6*dot(s*masses, 1 ./ (t .- coords).^4)
-    ∂tsH(t, s) = -2*dot(masses, 1 ./ (t .- coords).^3)
+function create_mass_homotopy(masses, positions, E, Λ)
+    H(t, s) = dot(s*masses, 1 ./ (t .- positions).^2) - C(0, E, Λ)
+    ∂tH(t, s) = -2*dot(s*masses, 1 ./ (t .- positions).^3)
+    ∂sH(t, s) = dot(masses, 1 ./ (t .- positions).^2)
+    ∂ttH(t, s) = 6*dot(s*masses, 1 ./ (t .- positions).^4)
+    ∂tsH(t, s) = -2*dot(masses, 1 ./ (t .- positions).^3)
     return H, ∂tH, ∂sH, ∂ttH, ∂tsH
 end
 
 
 """
-    create_homotopy(masses, coords, E, Λ)
+    create_homotopy(masses, positions, E, Λ)
 
 Returns the tuple `FD` containing the angle-changing homotopy `G` and its derivatives `∂tG, ∂sG, ∂ttG, ∂tsG`.
 
 See also: [`calc_crit_curves`](@ref).
 """
-function create_homotopy(masses, coords, E, Λ)
-    G(t, s) = dot(masses, 1 ./ (t .- coords).^2) - C(s, E, Λ)
-    ∂tG(t, s) = -2*dot(masses, 1 ./ (t .- coords).^3)
+function create_homotopy(masses, positions, E, Λ)
+    G(t, s) = dot(masses, 1 ./ (t .- positions).^2) - C(s, E, Λ)
+    ∂tG(t, s) = -2*dot(masses, 1 ./ (t .- positions).^3)
     ∂sG(t, s) = -∂C(s, E, Λ)
-    ∂ttG(t, s) = 6*dot(masses, 1 ./ (t .- coords).^4)
+    ∂ttG(t, s) = 6*dot(masses, 1 ./ (t .- positions).^4)
     ∂tsG(t, s) = 0.
     return G, ∂tG, ∂sG, ∂ttG, ∂tsG
 end
@@ -184,16 +184,16 @@ mass_lim_func(t0, s0, rate) = (4/3)*rate*s0
 
 
 """
-    evaluate_mass_homotopy(masses, coords, E, Λ, δs, rate, find_root)
+    evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
 
 Evaluates the mass-changing homotopy from δs to 1 and returns the array with the roots of the jacobian for the angle equal to zero.
 
 See also: [`calc_crit_curves`](@ref).
 """
-function evaluate_mass_homotopy(masses, coords, E, Λ, δs, rate, find_root)
-    mass_FD = create_mass_homotopy(masses, coords, E, Λ)
-    init1, init2 = find_corrections(masses, coords, δs, E, Λ)
-    start_roots = find_start_roots(mass_FD, coords, init1, init2, δs, find_root)
+function evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
+    mass_FD = create_mass_homotopy(masses, positions, E, Λ)
+    init1, init2 = find_corrections(masses, positions, δs, E, Λ)
+    start_roots = find_start_roots(mass_FD, positions, init1, init2, δs, find_root)
     roots = similar(start_roots)
     @showprogress 1 "Evaluating mass homotopy..." for (i, start) in enumerate(start_roots)
         roots[i] = homotopize(start, δs, 1., mass_FD, rate, mass_lim_func, find_root)
@@ -203,14 +203,14 @@ end
 
 
 """
-    evaluate_homotopy(roots, masses, coords, E, Λ, rate, nsteps, find_root)
+    evaluate_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root)
 
 Evaluates the angle-changing homotopy from 0 to 2π and returns a `Vector{Vector{Complex{Float64}}}`, which consists of vectors of points lying on the critical curves.
 
 See also: [`calc_crit_curves`](@ref).
 """
-function evaluate_homotopy(roots, masses, coords, E, Λ, rate, nsteps, find_root=simple_newton)
-    FD = create_homotopy(masses, coords, E, Λ)
+function evaluate_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root=simple_newton)
+    FD = create_homotopy(masses, positions, E, Λ)
     crit_curves = Vector{Vector{Complex{Float64}}}(undef, 0)
     lim_func(t0, s0, rate) = 2π / nsteps
     @showprogress 1 "Evaluating homotopy..." for root in roots
@@ -268,42 +268,42 @@ end
 
 
 """
-    calc_crit_curves(masses, coords, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+    calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
 
 Normally returns a `Vector{Vector{Complex{Float64}}}`, which consists of vectors of points lying on the critical curves.
 
 # Arguments
 - `masses`: the array containing the masses of the stars .
-- `coords`: the array containing the complex coordinates of the stars.
+- `positions`: the array containing the complex coordinates of the stars.
 - `E`, `Λ`: the lens parameters describing the external shear.
 - `δs`: the starting parameter of the mass-changing homotopy; should be a small real number.
 - `rate`: increasing this parameter effectively increases the adaptive step.
 - `nsteps`: the minimal number of steps in the angle-changing homotopy; you should increase it if you want smoother curves.
 - `find_root`: the root finder; its argumetns should be a complex function `f`, its derivative `∂f` and the initial approximation `init`.
 """
-function calc_crit_curves(masses, coords, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
-    roots = evaluate_mass_homotopy(masses, coords, E, Λ, δs, rate, find_root)
+function calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+    roots = evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
     duplicate_warning_roots(roots)
-    crit_curves = evaluate_homotopy(roots, masses, coords, E, Λ, rate, nsteps, find_root)
+    crit_curves = evaluate_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root)
     duplicate_warning_crit_curves(crit_curves)
     return crit_curves
 end
 
 
 """
-    calc_caustics(masses, coords, E, Λ, crit_curves)
+    calc_caustics(masses, positions, E, Λ, crit_curves)
 Computes the caustics by given critical curves `crit_curves`. 
 
 See also: [`calc_crit_curves`](@ref). 
 """
-function calc_caustics(masses, coords, E, Λ, crit_curves)
+function calc_caustics(masses, positions, E, Λ, crit_curves)
     caustics = Vector{Vector{Complex{Float64}}}(undef, 0)
     @showprogress 1 "Computing caustics..." for curve in crit_curves
         caustic = similar(curve)
         @showprogress 1 "Computing points on a caustic..." for (j, point) in enumerate(curve)
             res = A(E, Λ)*point + B(E, Λ)*conj(point)
             for k in 1:length(masses)
-                res -= masses[k]*(point-coords[k])/abs2(point-coords[k])
+                res -= masses[k]*(point-positions[k])/abs2(point-positions[k])
             end
             caustic[j] = res
         end
