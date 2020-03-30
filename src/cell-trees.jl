@@ -15,7 +15,7 @@ mutable struct CellNode <: AbstractCell
     
     is_visited::Bool # technical variable for propagating multipoles
 
-    """
+    @doc """
         CellNode()
 
     Creates a self-referential sink. It is a placeholder for non-existing children.
@@ -27,7 +27,7 @@ mutable struct CellNode <: AbstractCell
        return x
     end
 
-    """
+    @doc """
         CellNode(sink::CellNode, size::Float64, order::Int)
 
     Creates a node without children. Array `children` consists of four `sink`s. `order` is the higher multipole degree taken into account.
@@ -60,7 +60,7 @@ mutable struct CellTree
     root::CellNode
     order::Int
 
-    """
+    @doc """
         CellTree(size::Float64, order::Int)
 
     Creates a tree composed only of a root. All `root`'s children are set to `sink`.

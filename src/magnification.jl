@@ -82,7 +82,7 @@ end
 
 Calculates the interpolated impacts of the far stars for all the third level subcells of a first level cell and records them to the `int_far_sums` matrix. 
 
-The `real_fs` and `imag_fs` matrices should contain correspondingly the real and imaginary parts of the far stars impact on the second level subcells. This impact is normally computed with the [`calc_far_sums`](@ref) function.
+The `real_fs` and `imag_fs` matrices should contain correspondingly the real and imaginary parts of the far stars impact on the second level subcells. This impact is normally computed with the [`calc_far_sums!`](@ref) function.
 """
 function interpolate_far_sums!(int_far_sums, P::NumMLProblem,
                                real_fs, imag_fs)
