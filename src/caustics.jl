@@ -179,7 +179,13 @@ function create_angle_homotopy(masses, positions, E, Λ)
     return G, ∂tG, ∂sG, ∂ttG, ∂tsG
 end
 
+"""
+    mass_lim_func(t0, s0, rate)
 
+A limiting function for the step in the mass-changing homotopy.
+
+See also: [`evaluate_mass_homotopy`](@ref), [`homotopize_and_remember!`](@ref), [`homotopize`](@ref), [`auto_homotopy_step`](@ref), [`calc_crit_curves`](@ref).
+"""
 mass_lim_func(t0, s0, rate) = (4/3)*rate*s0
 
 
