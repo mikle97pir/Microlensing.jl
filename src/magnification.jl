@@ -219,8 +219,10 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
     domain_grid = Grid(domain, ngrid)
     image_grid = Grid(image, P.resol)
 
-    @showprogress 1 "Going through the rows..." for i in 1:ngrid
-        @showprogress 1 "Going through the columns..." for j in 1:ngrid
+    progress_bar = Progress(ngrid**2, "Going through the cells...", 1)
+
+    for i in 1:ngrid
+        for j in 1:ngrid
             cell = domain_grid[i, j]
 
             nnstars = calc_far_sums!(far_sums, cell, P, near_stars, stack)
@@ -243,6 +245,8 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
             fill!(far_sums, 0)
             fill!(int_near_sums, 0)
+
+            next!(progress_bar)
         end
     end
     norm_mag = normalize_mag(mag, P, domain, image)
