@@ -219,7 +219,7 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
     domain_grid = Grid(domain, ngrid)
     image_grid = Grid(image, P.resol)
 
-    progress_bar = Progress(ngrid**2, "Going through the cells...", 1)
+    progress_bar = Progress(ngrid^2, "Going through the cells...", 1)
 
     for i in 1:ngrid
         for j in 1:ngrid
