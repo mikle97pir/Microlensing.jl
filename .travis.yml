@@ -5,7 +5,6 @@ os:
 
 julia:
   - 1.2
-  - nightly
 
 jobs:
   include:
