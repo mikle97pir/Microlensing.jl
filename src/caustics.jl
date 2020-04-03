@@ -140,6 +140,21 @@ function homotopize_and_remember!(t_list, s_list, t_start, s_start, s_finish, ho
 end
 
 
+"""
+    homotopize_and_remember(t_start, s_start, s_finish, homotopy, rate, lim_func, find_root)
+
+Does the same as [`homotopize_and_ramember!`](@ref), but creates `t_list` and s_list` itself and returns `t_list`.
+
+See also: [`calc_crit_curves`](@ref), [`homotopy_step`](@ref).
+"""
+function homotopize_and_remember(t_start, s_start, s_finish, homotopy, rate, lim_func, find_root)
+    t_list = Vector{Complex{Float64}}(undef, 0)
+    s_list = Vector{Float64}(undef, 0)
+    homotopize_and_remember!(t_list, s_list, t_start, s_start, s_finish, homotopy, rate, lim_func, find_root)
+    return t_list  
+end
+
+
 A(E, Λ) = E*(Λ + 1)/2
 B(E, Λ) = E*(Λ - 1)/2
 C(φ, E, Λ) = A(E, Λ)*exp(im*φ) - B(E, Λ)

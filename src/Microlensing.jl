@@ -1,5 +1,6 @@
 module Microlensing
 
+    using Distributed
     import AbstractTrees
     using AbstractTrees: print_tree
     using DataStructures: Stack, top, pop!, push!
@@ -26,5 +27,6 @@ module Microlensing
     include("magnification.jl")
     include("parallel-magnification.jl")
     include("caustics.jl")
+    include("parallel-caustics.jl")
 
 end # module
