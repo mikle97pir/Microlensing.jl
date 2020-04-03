@@ -105,9 +105,9 @@ version = "0.4.3"
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[OffsetArrays]]
-git-tree-sha1 = "6a35d9446b40ae5004cd7bd0f1ae3505528c7fd6"
+git-tree-sha1 = "930db8ef90483570107f2396b1ffc6680f08e8b7"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.0.3"
+version = "1.0.4"
 
 [[OrderedCollections]]
 deps = ["Random", "Serialization", "Test"]
@@ -240,6 +240,6 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[WoodburyMatrices]]
 deps = ["LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "68f000f67654d07318d734b364a31233e465f49a"
+git-tree-sha1 = "28ffe06d28b1ba8fdb2f36ec7bb079fac81bac0d"
 uuid = "efce3f68-66dc-5838-9240-27a6d6f5f9b6"
-version = "0.5.1"
+version = "0.5.2"
