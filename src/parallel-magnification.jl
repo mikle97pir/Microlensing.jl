@@ -1,7 +1,7 @@
 """
     range_calc_mag(r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell)
 
-Just computes the magnification map on range `r`.
+Just computes the magnification map for the rows with numbers from the range `r`.
 """
 function range_calc_mag(r::UnitRange{Int}, P::NumMLProblem, 
                            domain::Cell, image::Cell)
@@ -54,7 +54,41 @@ function range_calc_mag(r::UnitRange{Int}, P::NumMLProblem,
 
             fill!(far_sums, 0)
             fill!(int_near_sums, 0)
+
         end
     end
     return mag
+end
+
+
+
+"""
+    break_into_ranges(n, nranges)
+
+Breaks the range `1:n` into a union of `nranges` ranges `1:x1`, `(x1+1):x2`, ..., `(xk+1):n`. Sizes of the resulting ranges cannot differ by more than 1. It is used by the [`par_calc_mag`](@ref) function to split the task between the workers.
+"""
+function break_into_ranges(n, nranges)
+    x = div(n, nranges)
+    y = x + 1
+    a = n - nranges*x
+    b = nranges - a
+    aranges = [(1+(i-1)*y):(i*y) for i in 1:a]
+    branges = [(a*y + 1 + (i-1)*x):(a*y + i*x) for i in 1:b]
+    return vcat(aranges, branges)
+end
+
+
+"""
+    par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+
+Does the same as [`calc_mag`](@ref), but in a parallel way. The progress bar does not work yet.
+"""
+function par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
+    E, Λ = P.E, P.Λ
+    ranges = break_into_ranges(ngrid, nworkers())
+    cmag(r) = range_calc_mag(r, P, domain, image)
+    mag = sum(pmap(cmag, ranges))
+    norm_mag = normalize_mag(mag, P, domain, image)
+    return norm_mag
 end

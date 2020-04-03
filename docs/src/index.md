@@ -79,6 +79,8 @@ CurrentModule = Microlensing
 
 ```@docs
     range_calc_mag(r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell)
+    break_into_ranges(n, nranges)
+    par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 ```
 
 ## Distributions

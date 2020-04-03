@@ -1,7 +1,7 @@
 """
     par_evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
 
-Does the same as [`evaluate_mass_homotopy`](@ref), but in parallel way.
+Does the same as [`evaluate_mass_homotopy`](@ref), but in a parallel way.
 
 See also: [`calc_crit_curves`](@ref).
 """
@@ -18,7 +18,7 @@ end
 """
     evaluate_angle_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root)
 
-Does the same as [`evaluate_angle_homotopy`](@ref), but in parallel way.
+Does the same as [`evaluate_angle_homotopy`](@ref), but in a parallel way.
 
 See also: [`calc_crit_curves`](@ref).
 """
@@ -35,7 +35,7 @@ end
 """
     par_calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
 
-Does the same as [`calc_crit_curves`](@ref), but in parallel way.
+Does the same as [`calc_crit_curves`](@ref), but in a parallel way.
 """
 function par_calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
     roots = par_evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
