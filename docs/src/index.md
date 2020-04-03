@@ -14,6 +14,7 @@ CurrentModule = Microlensing
     auto_homotopy_step(t0, s0, homotopy, rate, lim_func, find_root)
     homotopize(t_start, s_start, s_finish, homotopy, rate, lim_func, find_root)
     homotopize_and_remember!(t_list, s_list, t_start, s_start, s_finish, homotopy, rate, lim_func, find_root)
+    homotopize_and_remember(t_start, s_start, s_finish, homotopy, rate, lim_func, find_root)
     create_mass_homotopy(masses, positions, E, Λ)
     create_angle_homotopy(masses, positions, E, Λ)
     mass_lim_func(t0, s0, rate)
@@ -24,6 +25,14 @@ CurrentModule = Microlensing
     duplicate_warning_roots(roots)
     calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
     calc_caustics(masses, positions, E, Λ, crit_curves)
+```
+
+## Parallel caustics
+
+```@docs
+    par_evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
+    par_evaluate_angle_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root=simple_newton)
+    par_calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
 ```
 
 ## Grids and cells
