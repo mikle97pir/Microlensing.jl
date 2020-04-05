@@ -76,7 +76,7 @@ P
 
 
 
-Let us prepare for the computing of the magnification map. We are going to shoot the rays from a `40x40` square. It is big enough to contain all the critical curves. The image square will be `15x15`, because it contains all the caustics. We choose `resol=1024`, which means that the resolution of the resulting map will be `1024x1024`. The whole number of rays will be `ngrid^2 * nshare^2 * nint^2`.
+Let us prepare for the computing of the magnification map. We are going to shoot the rays from a `40x40` square. It is big enough to contain all the critical curves. The image square will be `15x15`, because it contains all the caustics. We choose `resol=1024`, which means that the resolution of the resulting map will be `1024x1024`. The whole number of rays will be `ngrid^2*nshare^2*nint^2`.
 
 
 ```julia
