@@ -40,7 +40,7 @@ It is not hard to compute the critical curves and the caustics. We choose `E = 1
 
 
 ```julia
-crit_curves = Microlensing.calc_crit_curves(masses, positions, 1., 1.)
+crit_curves = calc_crit_curves(masses, positions, 1., 1.)
 caustics = calc_caustics(masses, positions, 1., 1., crit_curves)
 ```
 
@@ -88,7 +88,7 @@ problem = NumMLProblem(T=tree, nstars=200, ngrid=4096, nshare=4, nint=4, resol=1
 
 
 ```julia
-mag = Microlensing.calc_mag(problem, domain, image)
+mag = calc_mag(problem, domain, image)
 ```
 
 
@@ -119,13 +119,13 @@ addprocs() # adds all the cores
 
 
 ```julia
-crit_curves = Microlensing.par_calc_crit_curves(masses, positions, 1., 1.)
+crit_curves = par_calc_crit_curves(masses, positions, 1., 1.)
 caustics = calc_caustics(masses, positions, 1., 1., crit_curves) # it is fast enough on a single core
 ```
 
 
 ```julia
-mag = Microlensing.par_calc_mag(problem, domain, image) # the progress bar does not work yet
+mag = par_calc_mag(problem, domain, image) # the progress bar does not work yet
 ```
 
 ## Documentation
