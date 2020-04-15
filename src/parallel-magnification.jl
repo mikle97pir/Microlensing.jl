@@ -102,13 +102,21 @@ Does the same as [`par_calc_mag`](@ref), but uses a `SharedArray` for the result
 function shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
     ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
     E, Λ = P.E, P.Λ
-    mag = SharedArray{Int, 2}(zeros(Int, (P.resol, P.resol)))
+    mag = SharedMatrix{Int}((P.resol, P.resol))
     ranges = break_into_ranges(ngrid, nworkers())
+    progress_bar = Progress(ngrid)
+    channel = RemoteChannel(()->Channel{Bool}(ngrid), myid())
     @sync begin
+        @async while take!(channel)
+            next!(progress_bar)
+            if progress_bar.counter == ngrid
+                put!(channel, false)
+            end
+        end
         for (i, worker) in enumerate(workers())
             r = ranges[i]
             @spawnat worker begin
-                range_calc_mag!(mag, worker, r, P, domain, image)
+                range_calc_mag!(mag, worker, r, P, domain, image, channel)
             end
         end
     end
@@ -121,10 +129,12 @@ end
 """
     range_calc_mag(r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell)
 
-Does the same as [`range_calc_mag`](@ref), but takes a `SharedArray` `mag` as an argument. See [`shared_calc_mag`](@ref).
+Does the same as [`range_calc_mag`](@ref), but takes a `SharedArray` `mag` as an argument. `channel` argument is a `RemoteChannel` for updating the progress bar.
+
+See [`shared_calc_mag`](@ref).
 """
 function range_calc_mag!(mag, worker, r::UnitRange{Int}, P::NumMLProblem, 
-                           domain::Cell, image::Cell)
+                           domain::Cell, image::Cell, channel)
 
     ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
     E, Λ = P.E, P.Λ
@@ -172,7 +182,7 @@ function range_calc_mag!(mag, worker, r::UnitRange{Int}, P::NumMLProblem,
 
             fill!(far_sums, 0)
             fill!(int_near_sums, 0)
-
         end
+        put!(channel, true)
     end
 end
