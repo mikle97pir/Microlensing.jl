@@ -1,6 +1,7 @@
 module Microlensing
 
     using Distributed
+    using SharedArrays
     import AbstractTrees
     using AbstractTrees: print_tree
     using DataStructures: Stack, top, pop!, push!
@@ -19,7 +20,7 @@ module Microlensing
     import StatsBase: params
 
     export Star, Power, Cell, NumMLProblem
-    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag,  par_calc_mag, calc_crit_curves, par_calc_crit_curves, calc_caustics
+    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag,  par_calc_mag, shared_calc_mag, calc_crit_curves, par_calc_crit_curves, calc_caustics
 
     include("star-field/star-field.jl")
     include("grids-and-cells.jl")

@@ -92,3 +92,87 @@ function par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
     norm_mag = normalize_mag(mag, P, domain, image)
     return norm_mag
 end
+
+
+"""
+    shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+
+Does the same as [`par_calc_mag`](@ref), but uses a `SharedArray` for the result. It is a little bit slower, but uses memory efficiently.
+"""
+function shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
+    E, Λ = P.E, P.Λ
+    mag = SharedArray{Int, 2}(zeros(Int, (P.resol, P.resol)))
+    ranges = break_into_ranges(ngrid, nworkers())
+    @sync begin
+        for (i, worker) in enumerate(workers())
+            r = ranges[i]
+            @spawnat worker begin
+                range_calc_mag!(mag, worker, r, P, domain, image)
+            end
+        end
+    end
+    norm_mag = normalize_mag(mag, P, domain, image)
+    return norm_mag
+end
+
+
+
+"""
+    range_calc_mag(r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell)
+
+Does the same as [`range_calc_mag`](@ref), but takes a `SharedArray` `mag` as an argument. See [`shared_calc_mag`](@ref).
+"""
+function range_calc_mag!(mag, worker, r::UnitRange{Int}, P::NumMLProblem, 
+                           domain::Cell, image::Cell)
+
+    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
+    E, Λ = P.E, P.Λ
+
+    s_sig = (nshare + 1, nshare + 1)
+    si_sig = (nshare*nint, nshare*nint)
+
+    stack = Stack{CellNode}()
+    near_stars = Vector{Star}(undef, P.nstars)
+    far_sums = zeros(Complex{Float64}, s_sig)
+
+    real_fs = zeros(Float64, s_sig)
+    imag_fs = zeros(Float64, s_sig)
+
+    int_far_sums = zeros(Complex{Float64}, si_sig)
+    int_near_sums = zeros(Complex{Float64}, si_sig)
+    int_grid_mat = zeros(Complex{Float64}, si_sig)
+
+    lense = zeros(Complex{Float64}, si_sig)
+
+    domain_grid = Grid(domain, ngrid)
+    image_grid = Grid(image, P.resol)
+
+    for i in r
+        for j in 1:ngrid
+            cell = domain_grid[i, j]
+
+            nnstars = calc_far_sums!(far_sums, cell, P, near_stars, stack)
+
+            int_grid = Grid(cell, nshare*nint)
+            real_fs .= real.(far_sums)
+            imag_fs .= imag.(far_sums)
+
+            interpolate_far_sums!(int_far_sums, P, real_fs, imag_fs)
+
+            matrix_rep!(int_grid_mat, int_grid, kind=:leftup)
+
+            calc_near_sums!(int_near_sums, near_stars, 
+                            nnstars, P, int_grid_mat)
+
+            @. lense = E*Λ*real(int_grid_mat) + E*imag(int_grid_mat)*im
+            @. lense = lense - int_far_sums - int_near_sums
+
+            remotecall_wait(update_mag!, worker, mag, lense, image_grid, P)
+
+            fill!(far_sums, 0)
+            fill!(int_near_sums, 0)
+
+        end
+    end
+end
