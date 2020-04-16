@@ -104,19 +104,21 @@ function shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
     E, Λ = P.E, P.Λ
     mag = SharedMatrix{Int}((P.resol, P.resol))
     ranges = break_into_ranges(ngrid, nworkers())
-    progress_bar = Progress(ngrid)
+    progress_bar = Progress(ngrid, "Shooting rays...")
     channel = RemoteChannel(()->Channel{Bool}(ngrid), myid())
     @sync begin
-        @async while take!(channel)
-            next!(progress_bar)
-            if progress_bar.counter == ngrid
-                put!(channel, false)
+        @async while true
+            if take!(channel)
+                next!(progress_bar)
+                if progress_bar.counter == ngrid
+                    break
+                end
             end
         end
         for (i, worker) in enumerate(workers())
-            r = ranges[i]
             @spawnat worker begin
-                range_calc_mag!(mag, worker, r, P, domain, image, channel)
+                range_calc_mag!(mag, ranges[i], P, domain, image, channel)
+                println("Finished")
             end
         end
     end
@@ -133,7 +135,7 @@ Does the same as [`range_calc_mag`](@ref), but takes a `SharedArray` `mag` as an
 
 See [`shared_calc_mag`](@ref).
 """
-function range_calc_mag!(mag, worker, r::UnitRange{Int}, P::NumMLProblem, 
+function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, 
                            domain::Cell, image::Cell, channel)
 
     ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
@@ -178,7 +180,7 @@ function range_calc_mag!(mag, worker, r::UnitRange{Int}, P::NumMLProblem,
             @. lense = E*Λ*real(int_grid_mat) + E*imag(int_grid_mat)*im
             @. lense = lense - int_far_sums - int_near_sums
 
-            remotecall_wait(update_mag!, worker, mag, lense, image_grid, P)
+            update_mag!(mag, lense, image_grid, P)
 
             fill!(far_sums, 0)
             fill!(int_near_sums, 0)
