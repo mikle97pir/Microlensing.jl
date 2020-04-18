@@ -78,12 +78,9 @@ CurrentModule = Microlensing
 ## Parallel magnification
 
 ```@docs
-    range_calc_mag(r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell)
-    break_into_ranges(n, nranges)
+    break_into_ranges(n::Int, nranges::Int)
     par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
-    range_calc_mag!(mag, worker, r::UnitRange{Int}, P::NumMLProblem, 
-                           domain::Cell, image::Cell, channel)
-    shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    range_calc_mag!(mag::SharedMatrix{Int}, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
 ```
 
 ## Distributions

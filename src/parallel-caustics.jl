@@ -37,7 +37,7 @@ end
 
 Does the same as [`calc_crit_curves`](@ref), but in a parallel way.
 """
-function par_calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+function par_calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.1, nsteps=500, find_root=simple_newton)
     roots = par_evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
     duplicate_warning_roots(roots)
     crit_curves = par_evaluate_angle_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root)

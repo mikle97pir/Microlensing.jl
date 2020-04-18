@@ -249,6 +249,6 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
             next!(progress_bar)
         end
     end
-    norm_mag = normalize_mag(mag, P, domain, image)
-    return norm_mag
+    
+    return mag
 end

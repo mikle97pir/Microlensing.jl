@@ -302,7 +302,7 @@ Normally returns a `Vector{Vector{Complex{Float64}}}`, which consists of vectors
 - `nsteps`: the minimal number of steps in the angle-changing homotopy; you should increase it if you want smoother curves.
 - `find_root`: the root finder; its argumetns should be a complex function `f`, its derivative `∂f` and the initial approximation `init`.
 """
-function calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+function calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.1, nsteps=500, find_root=simple_newton)
     roots = evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
     duplicate_warning_roots(roots)
     crit_curves = evaluate_angle_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root)
