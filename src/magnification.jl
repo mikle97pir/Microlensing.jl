@@ -178,6 +178,32 @@ end
 
 
 """
+    update_mag!(mag::DArray, lense, image_grid::Grid,
+                     P::NumMLProblem)
+
+A method of [`update_mag!`](@ref) for a distributed `mag`. Updates only the `mag.localpart` on every worker.
+""" 
+function update_mag!(mag::DArray, lense, image_grid::Grid,
+                     P::NumMLProblem)
+
+    nshare, nint = P.nshare, P.nint
+
+    for i in 1:nshare*nint
+        for j in 1:nshare*nint
+            pos = lense[i, j]
+            imsize = image_grid.size
+            nimgrid = image_grid.ngrid
+            u, v = find_cell(pos, imsize, nimgrid)
+            if (1 <= u <= nimgrid) & (1 <= v <= nimgrid)
+                mag.localpart[u, v, 1] += 1 # here is the only difference
+            end
+        end
+    end
+
+end
+
+
+"""
     normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
 Normalizes the magnification map in such a way that magnification is equal to 1 on the infinity.
 """

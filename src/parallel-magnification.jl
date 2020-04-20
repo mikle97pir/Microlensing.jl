@@ -15,11 +15,11 @@ end
 
 
 """
-    range_calc_mag!(mag::SharedMatrix{Int}, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
+    range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
 
 Computes the magnification map for a part of the set of rays (with row numbers from the range `r`) and adds it to `mag`. It is used by [`par_calc_mag`](@ref) to do a part of the job on one of the workers. The `channel` is used to transmit information about the calculation progress. 
 """
-function range_calc_mag!(mag::SharedMatrix{Int}, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
+function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
 
     ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
     E, Λ = P.E, P.Λ
@@ -103,4 +103,84 @@ function par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
         end
     end
     return sdata(mag)
+end
+
+
+
+"""
+    distr_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+
+Does the same as [`calc_mag`](@ref), but in a parallel way.
+"""
+function distr_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
+    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
+    E, Λ = P.E, P.Λ
+    mag = dzeros(
+        Int, (P.resol, P.resol, nworkers()), 
+        workers(), [1, 1, nworkers()]
+    )
+    ranges = break_into_ranges(ngrid, nworkers())
+    progress_bar = Progress(ngrid, "Shooting rays...")
+    channel = RemoteChannel(()->Channel{Bool}(ngrid), myid())
+
+    @sync begin
+        # this async block updates the progress_bar
+        @async while true
+            if take!(channel)
+                next!(progress_bar)
+                if progress_bar.counter == ngrid
+                    break
+                end
+            end
+        end
+        # here starts the real computation
+        for (i, worker) in enumerate(workers())
+            @spawnat worker begin
+                range_calc_mag!(mag, ranges[i], P, domain, image, channel)
+            end
+        end
+    end
+
+    @info "Computation finished"
+    sleep(1)
+
+    # saving the magnification maps to temporary files
+    temp_save_mags(mag, tmp_path)
+    close(mag)
+    @info "Temporary files created"
+    sleep(1)
+
+    #cleaning up
+    @everywhere GC.gc()
+
+    @info "Memory is free"
+
+    sleep(1)
+
+    # loading and adding up all the maps from workers
+    return sum_mags(P.resol, tmp_path)
+end
+
+
+function temp_save_mags(mag::DArray, tmp_path="./")
+    @sync for worker in workers()
+        @spawnat worker begin
+            path = tmp_path*"tmp"*string(worker)*".jld"
+            jldopen(path, "w") do file
+                write(file, "mag", view(mag.localpart, :, :, 1))
+            end
+        end
+    end
+end
+
+function sum_mags(resol, tmp_path="./")
+    mag = zeros(Int, (resol, resol))
+    @showprogress 1 "Fetching from workers..." for worker in workers()
+        path = tmp_path*"tmp"*string(worker)*".jld"
+        jldopen(path, "r") do file
+            mag .+= read(file, "mag")
+        end
+        rm(path)
+    end
+    return mag
 end
