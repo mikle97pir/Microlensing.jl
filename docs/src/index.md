@@ -71,6 +71,7 @@ CurrentModule = Microlensing
     calc_near_sums!(int_near_sums, near_stars, nnstars, P::NumMLProblem, int_grid_mat)
     find_cell(pos, imsize, nimgrid)
     update_mag!(mag, lense, image_grid::Grid, P::NumMLProblem)
+    update_mag!(mag::DArray, lense, image_grid::Grid, P::NumMLProblem)
     normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
     calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 ```
@@ -79,8 +80,11 @@ CurrentModule = Microlensing
 
 ```@docs
     break_into_ranges(n::Int, nranges::Int)
-    par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
+    shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
     range_calc_mag!(mag::SharedMatrix{Int}, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
+    temp_save_mags(mag::DArray, tmp_path="./")
+    sum_mags(resol::Int, tmp_path="./")
 ```
 
 ## Distributions

@@ -74,11 +74,11 @@ end
 
 
 """
-    par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
-Does the same as [`calc_mag`](@ref), but in a parallel way.
+Does the same as [`calc_mag`](@ref), but in a parallel way. It is fast and memory efficient, but thread unsafe. You should use [`calc_mag`](@ref) or [`par_calc_mag`](@ref) if you need a completely correct answer.
 """
-function par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+function shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
     ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
     E, Λ = P.E, P.Λ
     mag = SharedMatrix{Int}((P.resol, P.resol))
@@ -108,11 +108,11 @@ end
 
 
 """
-    distr_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
 
-Does the same as [`calc_mag`](@ref), but in a parallel way.
+Does the same as [`calc_mag`](@ref), but in a parallel way. Uses hard drive for large temporary arrays, therefore may be too slow for short computations.
 """
-function distr_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
+function par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
     ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
     E, Λ = P.E, P.Λ
     mag = dzeros(
@@ -141,27 +141,23 @@ function distr_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./
         end
     end
 
-    @info "Computation finished"
-    sleep(1)
-
     # saving the magnification maps to temporary files
     temp_save_mags(mag, tmp_path)
-    close(mag)
-    @info "Temporary files created"
-    sleep(1)
-
+    
     #cleaning up
+    close(mag)
     @everywhere GC.gc()
-
-    @info "Memory is free"
-
-    sleep(1)
 
     # loading and adding up all the maps from workers
     return sum_mags(P.resol, tmp_path)
 end
 
 
+"""
+    temp_save_mags(mag::DArray, tmp_path="./")
+
+Saves `mag.localpart` to a temporary `.jld` file on every worker. `mag.size` should be equal to `(N, N, nworkers())` with a `(N, N, 1)`-part on every worker.
+"""
 function temp_save_mags(mag::DArray, tmp_path="./")
     @sync for worker in workers()
         @spawnat worker begin
@@ -173,7 +169,13 @@ function temp_save_mags(mag::DArray, tmp_path="./")
     end
 end
 
-function sum_mags(resol, tmp_path="./")
+
+"""
+    sum_mags(resol::Int, tmp_path="./")
+
+Loads all the files created by [`temp_save_mags`](@ref) and calculates `sum(mag, dims=3)`.
+"""
+function sum_mags(resol::Int, tmp_path="./")
     mag = zeros(Int, (resol, resol))
     @showprogress 1 "Fetching from workers..." for worker in workers()
         path = tmp_path*"tmp"*string(worker)*".jld"
