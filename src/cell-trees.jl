@@ -298,7 +298,7 @@ function calc_multipoles!(T::CellTree)
     binomials = calc_binomials(T.order)
     
     while !isempty(S)
-        cell = top(S)
+        cell = first(S)
         if cell.nstars > 1
             if !cell.is_visited
                 for child in cell.children
