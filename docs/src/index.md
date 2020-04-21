@@ -72,7 +72,6 @@ CurrentModule = Microlensing
     find_cell(pos, imsize, nimgrid)
     update_mag!(mag, lense, image_grid::Grid, P::NumMLProblem)
     update_mag!(mag::DArray, lense, image_grid::Grid, P::NumMLProblem)
-    normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
     calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 ```
 

@@ -152,12 +152,30 @@ end
 
 
 """
-    update_mag!(mag, lense, image_grid::SquareGrid,
+    find_cell(pos, image::RectGrid)
+
+By the position `pos` of a point in the image plane finds the indicies of an image grid cell containing this point.
+"""
+function find_cell(pos, image::RectGrid)
+    x = pos.re
+    y = pos.im
+    Lx = image.leftup.re
+    Ly = image.leftup.im
+    step = image.step
+    u = ceil(Int, (Ly-y)/step + 0.5)
+    v = ceil(Int, (x-Lx)/step + 0.5)
+    return u, v
+end
+
+
+
+"""
+    update_mag!(mag, lense, image::RectGrid,
                      P::NumMLProblem)
 
 Updates the magnification map `mag` taking into account the lense map `lense` computed for all the rays from a first level cell.
 """
-function update_mag!(mag, lense, image_grid::SquareGrid,
+function update_mag!(mag, lense, image::RectGrid,
                      P::NumMLProblem)
 
     nshare, nint = P.nshare, P.nint
@@ -165,10 +183,8 @@ function update_mag!(mag, lense, image_grid::SquareGrid,
     for i in 1:nshare*nint
         for j in 1:nshare*nint
             pos = lense[i, j]
-            imsize = image_grid.size
-            nimgrid = image_grid.ngrid
-            u, v = find_cell(pos, imsize, nimgrid)
-            if (1 <= u <= nimgrid) & (1 <= v <= nimgrid)
+            u, v = find_cell(pos, image)
+            if (1 <= u <= image.ngrid[1]) & (1 <= v <= image.ngrid[2])
                 mag[u, v] += 1
             end
         end
@@ -204,30 +220,16 @@ end
 
 
 """
-    normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
-Normalizes the magnification map in such a way that magnification is equal to 1 on the infinity.
-"""
-function normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
-    nrays = P.ngrid^2*P.nshare^2*P.nint^2
-    mult = nrays/(P.resol^2)*(image.size^2/domain.size^2)*(1/abs(P.Λ))
-    return mag/mult
-end
-
-
-"""
-    calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid)
 
 Just computes the magnification map. Output is normalized in such a way that the magnification is equal to 1 at the infinity.
 """
-function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+function calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid)
 
-    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
-    E, Λ = P.E, P.Λ
+    mag = zeros(Int, image.ngrid)
 
-    mag = zeros(Int, (P.resol, P.resol))
-
-    s_sig = (nshare + 1, nshare + 1)
-    si_sig = (nshare*nint, nshare*nint)
+    s_sig = (P.nshare + 1, P.nshare + 1)
+    si_sig = (P.nshare*P.nint, P.nshare*P.nint)
 
     stack = Stack{CellNode}()
     near_stars = Vector{Star}(undef, P.nstars)
@@ -242,18 +244,19 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
     lense = zeros(Complex{Float64}, si_sig)
 
-    domain_grid = SquareGrid(domain, ngrid)
-    image_grid = SquareGrid(image, P.resol)
+    progress_bar = Progress(
+        domain.ngrid[1]*domain.ngrid[2], 
+        "Shooting rays..."
+    )
 
-    progress_bar = Progress(ngrid^2, "Shooting rays...")
+    for i in 1:domain.ngrid[1]
+        for j in 1:domain.ngrid[2]
 
-    for i in 1:ngrid
-        for j in 1:ngrid
-            cell = domain_grid[i, j]
+            cell = domain[i, j]
 
             nnstars = calc_far_sums!(far_sums, cell, P, near_stars, stack)
 
-            int_grid = SquareGrid(cell, nshare*nint)
+            int_grid = SquareGrid(cell, P.nshare*P.nint)
             real_fs .= real.(far_sums)
             imag_fs .= imag.(far_sums)
 
@@ -264,10 +267,10 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
             calc_near_sums!(int_near_sums, near_stars, 
                             nnstars, P, int_grid_mat)
 
-            @. lense = E*Λ*real(int_grid_mat) + E*imag(int_grid_mat)*im
+            @. lense = P.E*P.Λ*real(int_grid_mat) + P.E*imag(int_grid_mat)*im
             @. lense = lense - int_far_sums - int_near_sums
 
-            update_mag!(mag, lense, image_grid, P)
+            update_mag!(mag, lense, image, P)
 
             fill!(far_sums, 0)
             fill!(int_near_sums, 0)
