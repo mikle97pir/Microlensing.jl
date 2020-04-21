@@ -2,10 +2,8 @@
 # Fields
 - `T::CellTree`: normally is created with the [`build_tree`](@ref) function.
 - `nstars::Int`: number of stars in simulation.
-- `ngrid::Int`: `ngrid^2` is the number of the first level cells. For them the "go down the tree and find the right nodes" part of the computation is excecuted completely.
 - `nshare::Int`: `nshare^2` is the number of the second level subcells of a first level cell. For them the computation is complete, but they all share the same tree structure of the first level cell containing them.
 - `nint::Int`: `nint^2` is the number of the third level subcells of a second level cell. For them the algorithm attentively takes care of the stars located near the corresponding first level cell, but the impact of all other stars is interpolated.
-- `resol::Int`: `resol×resol` is the resolution of the resulting magnification map.
 - `E::Float64`: first parameter of the shear.
 - `Λ::Float64`: second parameter of the shear.
 - `δ::Float64`: the precision parameter. Higher `δ` - higher precision!
@@ -13,10 +11,8 @@
 @with_kw struct NumMLProblem
     T::CellTree
     nstars::Int
-    ngrid::Int
-    nshare::Int = 8
-    nint::Int = 8
-    resol::Int
+    nshare::Int = 4
+    nint::Int = 4
     E::Float64 = 1.
     Λ::Float64 = 1.
     δ::Float64 = 0.8
@@ -137,21 +133,6 @@ end
 
 
 """
-    find_cell(pos, imsize, nimgrid)
-
-By the position `pos` of a point in the image plane finds the indicies of an image grid cell containing this point.
-"""
-function find_cell(pos, imsize, nimgrid)
-    step = imsize/nimgrid
-    x = pos.re
-    y = pos.im
-    i = ceil(Int, (imsize/2-y)/step)
-    j = ceil(Int, (x+imsize/2)/step)
-    return i, j
-end
-
-
-"""
     find_cell(pos, image::RectGrid)
 
 By the position `pos` of a point in the image plane finds the indicies of an image grid cell containing this point.
@@ -194,12 +175,12 @@ end
 
 
 """
-    update_mag!(mag::DArray, lense, image_grid::SquareGrid,
+    update_mag!(mag::DArray, lense, image::RectGrid,
                      P::NumMLProblem)
 
 A method of [`update_mag!`](@ref) for a distributed `mag`. Updates only the `mag.localpart` on every worker.
 """ 
-function update_mag!(mag::DArray, lense, image_grid::SquareGrid,
+function update_mag!(mag::DArray, lense, image::RectGrid,
                      P::NumMLProblem)
 
     nshare, nint = P.nshare, P.nint
@@ -207,10 +188,8 @@ function update_mag!(mag::DArray, lense, image_grid::SquareGrid,
     for i in 1:nshare*nint
         for j in 1:nshare*nint
             pos = lense[i, j]
-            imsize = image_grid.size
-            nimgrid = image_grid.ngrid
-            u, v = find_cell(pos, imsize, nimgrid)
-            if (1 <= u <= nimgrid) & (1 <= v <= nimgrid)
+            u, v = find_cell(pos, image)
+            if (1 <= u <= image.ngrid[1]) & (1 <= v <= image.ngrid[2])
                 mag.localpart[u, v, 1] += 1 # here is the only difference
             end
         end

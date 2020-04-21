@@ -19,13 +19,10 @@ end
 
 Computes the magnification map for a part of the set of rays (with row numbers from the range `r`) and adds it to `mag`. It is used by [`par_calc_mag`](@ref) to do a part of the job on one of the workers. The `channel` is used to transmit information about the calculation progress. 
 """
-function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
-
-    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
-    E, Λ = P.E, P.Λ
-
-    s_sig = (nshare + 1, nshare + 1)
-    si_sig = (nshare*nint, nshare*nint)
+function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::RectGrid, image::RectGrid, channel::RemoteChannel{Channel{Bool}})
+    
+    s_sig = (P.nshare + 1, P.nshare + 1)
+    si_sig = (P.nshare*P.nint, P.nshare*P.nint)
 
     stack = Stack{CellNode}()
     near_stars = Vector{Star}(undef, P.nstars)
@@ -40,16 +37,14 @@ function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, 
 
     lense = zeros(Complex{Float64}, si_sig)
 
-    domain_grid = SquareGrid(domain, ngrid)
-    image_grid = SquareGrid(image, P.resol)
-
     for i in r
-        for j in 1:ngrid
-            cell = domain_grid[i, j]
+        for j in 1:domain.ngrid[2]
+
+            cell = domain[i, j]
 
             nnstars = calc_far_sums!(far_sums, cell, P, near_stars, stack)
 
-            int_grid = SquareGrid(cell, nshare*nint)
+            int_grid = SquareGrid(cell, P.nshare*P.nint)
             real_fs .= real.(far_sums)
             imag_fs .= imag.(far_sums)
 
@@ -60,10 +55,10 @@ function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, 
             calc_near_sums!(int_near_sums, near_stars, 
                             nnstars, P, int_grid_mat)
 
-            @. lense = E*Λ*real(int_grid_mat) + E*imag(int_grid_mat)*im
+            @. lense = P.E*P.Λ*real(int_grid_mat) + P.E*imag(int_grid_mat)*im
             @. lense = lense - int_far_sums - int_near_sums
 
-            update_mag!(mag, lense, image_grid, P)
+            update_mag!(mag, lense, image, P)
 
             fill!(far_sums, 0)
             fill!(int_near_sums, 0)
@@ -78,19 +73,18 @@ end
 
 Does the same as [`calc_mag`](@ref), but in a parallel way. It is fast and memory efficient, but thread unsafe. You should use [`calc_mag`](@ref) or [`par_calc_mag`](@ref) if you need a completely correct answer.
 """
-function shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
-    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
-    E, Λ = P.E, P.Λ
-    mag = SharedMatrix{Int}((P.resol, P.resol))
-    ranges = break_into_ranges(ngrid, nworkers())
-    progress_bar = Progress(ngrid, "Shooting rays...")
-    channel = RemoteChannel(()->Channel{Bool}(ngrid), myid())
+function shared_calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid)
+    nrows, ncols = domain.ngrid
+    mag = SharedMatrix{Int}(image.ngrid)
+    ranges = break_into_ranges(nrows, nworkers())
+    progress_bar = Progress(nrows, "Shooting rays...")
+    channel = RemoteChannel(()->Channel{Bool}(nrows), myid())
     @sync begin
         # this async block updates the progress_bar
         @async while true
             if take!(channel)
                 next!(progress_bar)
-                if progress_bar.counter == ngrid
+                if progress_bar.counter == nrows
                     break
                 end
             end
@@ -112,23 +106,26 @@ end
 
 Does the same as [`calc_mag`](@ref), but in a parallel way. Uses hard drive for large temporary arrays, therefore may be too slow for short computations.
 """
-function par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
-    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
-    E, Λ = P.E, P.Λ
+function par_calc_mag(P::NumMLProblem, domain::RectGrid, 
+                      image::RectGrid, tmp_path="./")
+
+    nrows, ncols = domain.ngrid
+    
     mag = dzeros(
-        Int, (P.resol, P.resol, nworkers()), 
+        Int, (image.ngrid..., nworkers()), 
         workers(), [1, 1, nworkers()]
     )
-    ranges = break_into_ranges(ngrid, nworkers())
-    progress_bar = Progress(ngrid, "Shooting rays...")
-    channel = RemoteChannel(()->Channel{Bool}(ngrid), myid())
+
+    ranges = break_into_ranges(nrows, nworkers())
+    progress_bar = Progress(nrows, "Shooting rays...")
+    channel = RemoteChannel(()->Channel{Bool}(nrows), myid())
 
     @sync begin
         # this async block updates the progress_bar
         @async while true
             if take!(channel)
                 next!(progress_bar)
-                if progress_bar.counter == ngrid
+                if progress_bar.counter == nrows
                     break
                 end
             end
@@ -149,7 +146,7 @@ function par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
     @everywhere GC.gc()
 
     # loading and adding up all the maps from workers
-    return sum_mags(P.resol, tmp_path)
+    return sum_mags(image, tmp_path)
 end
 
 
@@ -175,8 +172,8 @@ end
 
 Loads all the files created by [`temp_save_mags`](@ref) and calculates `sum(mag, dims=3)`.
 """
-function sum_mags(resol::Int, tmp_path="./")
-    mag = zeros(Int, (resol, resol))
+function sum_mags(image::RectGrid, tmp_path="./")
+    mag = zeros(Int, image.ngrid)
     @showprogress 1 "Fetching from workers..." for worker in workers()
         path = tmp_path*"tmp"*string(worker)*".jld"
         jldopen(path, "r") do file

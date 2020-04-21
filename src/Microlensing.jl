@@ -21,7 +21,7 @@ module Microlensing
     import Statistics: mean, quantile, var
     import StatsBase: params
 
-    export Star, Power, Cell, NumMLProblem
+    export Star, Power, RectGrid, NumMLProblem
     export generate_stars_rect, generate_stars_ell, build_tree, calc_mag,  par_calc_mag, shared_calc_mag, calc_crit_curves, par_calc_crit_curves, calc_caustics
 
     include("star-field/star-field.jl")
@@ -32,4 +32,4 @@ module Microlensing
     include("caustics.jl")
     include("parallel-caustics.jl")
 
-end # module
+end

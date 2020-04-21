@@ -23,7 +23,7 @@ CurrentModule = Microlensing
     check_for_duplicates(array)
     duplicate_warning_crit_curves(crit_curves)
     duplicate_warning_roots(roots)
-    calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+    calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.1, nsteps=500, find_root=simple_newton)
     calc_caustics(masses, positions, E, Λ, crit_curves)
 ```
 
@@ -32,17 +32,19 @@ CurrentModule = Microlensing
 ```@docs
     par_evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
     par_evaluate_angle_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root=simple_newton)
-    par_calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+    par_calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.1, nsteps=500, find_root=simple_newton)
 ```
 
 ## Grids and cells
 
 ```@docs
-    get_index_leftup(grid::Grid, i, j)
-    get_index_center(grid::Grid, i, j)
-    Base.getindex(grid::Grid, i::Int, j::Int)
-    matrix_rep(grid::Grid, n=grid.ngrid; kind=:center)
-    dist(c1::AbstractCell, c2::AbstractCell)
+    get_index_leftup(grid::AbstractGrid, i, j)
+    get_index_center(grid::AbstractGrid, i, j)
+    Base.getindex(grid::AbstractGrid, i::Int, j::Int)
+    matrix_rep(grid::RectGrid, n=grid.ngrid; kind=:center)
+    matrix_rep!(matrix, grid::RectGrid, n=grid.ngrid; kind=:center)
+    matrix_rep(grid::SquareGrid, n=grid.ngrid; kind=:center)
+    matrix_rep!(matrix, grid::SquareGrid, n=grid.ngrid; kind=:center)
 ```
 
 ## Cell trees
@@ -69,21 +71,21 @@ CurrentModule = Microlensing
     calc_far_sums!(far_sums, cell::Cell, P::NumMLProblem, near_stars::Vector{Star}, stack::Stack{CellNode})
     interpolate_far_sums!(int_far_sums, P::NumMLProblem, real_fs, imag_fs)
     calc_near_sums!(int_near_sums, near_stars, nnstars, P::NumMLProblem, int_grid_mat)
-    find_cell(pos, imsize, nimgrid)
-    update_mag!(mag, lense, image_grid::Grid, P::NumMLProblem)
-    update_mag!(mag::DArray, lense, image_grid::Grid, P::NumMLProblem)
-    calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    find_cell(pos, image::RectGrid)
+    update_mag!(mag, lense, image::RectGrid, P::NumMLProblem)
+    update_mag!(mag::DArray, lense, image::RectGrid, P::NumMLProblem)
+    calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid)
 ```
 
 ## Parallel magnification
 
 ```@docs
     break_into_ranges(n::Int, nranges::Int)
-    par_calc_mag(P::NumMLProblem, domain::Cell, image::Cell, tmp_path="./")
-    shared_calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
-    range_calc_mag!(mag::SharedMatrix{Int}, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
+    range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::RectGrid, image::RectGrid, channel::RemoteChannel{Channel{Bool}})
+    shared_calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid)
+    par_calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid, tmp_path="./")
     temp_save_mags(mag::DArray, tmp_path="./")
-    sum_mags(resol::Int, tmp_path="./")
+    sum_mags(image::RectGrid, tmp_path="./")
 ```
 
 ## Distributions

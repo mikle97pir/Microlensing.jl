@@ -14,11 +14,11 @@ Cell(center, size) = Cell(center, size, center + (im-1)*size/2)
 
 abstract type AbstractGrid; end
 
+
 struct RectGrid <: AbstractGrid
     center::Complex{Float64}
     size::Tuple{Float64, Float64}
-    ngrid::Tuple{Int, Int} 
-    # ngrid[1]*ngrid[2] is the number of cells in the grid
+    ngrid::Tuple{Int, Int} # ngrid[1]*ngrid[2] is the number of cells in the grid
     step::Float64
     leftup::Complex{Float64}
 end
