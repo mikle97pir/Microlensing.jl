@@ -36,7 +36,7 @@ function calc_far_sums!(far_sums, cell::Cell, P::NumMLProblem,
 
     nshare = P.nshare
     push!(stack, P.T.root)
-    grid = Grid(cell, nshare)
+    grid = SquareGrid(cell, nshare)
     nnstars = 0
 
     while !isempty(stack)
@@ -152,12 +152,12 @@ end
 
 
 """
-    update_mag!(mag, lense, image_grid::Grid,
+    update_mag!(mag, lense, image_grid::SquareGrid,
                      P::NumMLProblem)
 
 Updates the magnification map `mag` taking into account the lense map `lense` computed for all the rays from a first level cell.
 """
-function update_mag!(mag, lense, image_grid::Grid,
+function update_mag!(mag, lense, image_grid::SquareGrid,
                      P::NumMLProblem)
 
     nshare, nint = P.nshare, P.nint
@@ -178,12 +178,12 @@ end
 
 
 """
-    update_mag!(mag::DArray, lense, image_grid::Grid,
+    update_mag!(mag::DArray, lense, image_grid::SquareGrid,
                      P::NumMLProblem)
 
 A method of [`update_mag!`](@ref) for a distributed `mag`. Updates only the `mag.localpart` on every worker.
 """ 
-function update_mag!(mag::DArray, lense, image_grid::Grid,
+function update_mag!(mag::DArray, lense, image_grid::SquareGrid,
                      P::NumMLProblem)
 
     nshare, nint = P.nshare, P.nint
@@ -242,8 +242,8 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
     lense = zeros(Complex{Float64}, si_sig)
 
-    domain_grid = Grid(domain, ngrid)
-    image_grid = Grid(image, P.resol)
+    domain_grid = SquareGrid(domain, ngrid)
+    image_grid = SquareGrid(image, P.resol)
 
     progress_bar = Progress(ngrid^2, "Shooting rays...")
 
@@ -253,7 +253,7 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
             nnstars = calc_far_sums!(far_sums, cell, P, near_stars, stack)
 
-            int_grid = Grid(cell, nshare*nint)
+            int_grid = SquareGrid(cell, nshare*nint)
             real_fs .= real.(far_sums)
             imag_fs .= imag.(far_sums)
 

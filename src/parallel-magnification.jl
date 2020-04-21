@@ -40,8 +40,8 @@ function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, 
 
     lense = zeros(Complex{Float64}, si_sig)
 
-    domain_grid = Grid(domain, ngrid)
-    image_grid = Grid(image, P.resol)
+    domain_grid = SquareGrid(domain, ngrid)
+    image_grid = SquareGrid(image, P.resol)
 
     for i in r
         for j in 1:ngrid
@@ -49,7 +49,7 @@ function range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, 
 
             nnstars = calc_far_sums!(far_sums, cell, P, near_stars, stack)
 
-            int_grid = Grid(cell, nshare*nint)
+            int_grid = SquareGrid(cell, nshare*nint)
             real_fs .= real.(far_sums)
             imag_fs .= imag.(far_sums)
 

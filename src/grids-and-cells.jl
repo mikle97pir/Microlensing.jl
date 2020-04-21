@@ -12,7 +12,29 @@ end
 Cell(center, size) = Cell(center, size, center + (im-1)*size/2)
 
 
-struct Grid
+abstract type AbstractGrid; end
+
+struct RectGrid <: AbstractGrid
+    center::Complex{Float64}
+    size::Tuple{Float64, Float64}
+    ngrid::Tuple{Int, Int} 
+    # ngrid[1]*ngrid[2] is the number of cells in the grid
+    step::Float64
+    leftup::Complex{Float64}
+end
+
+
+function RectGrid(width::Float64, ngrid::Tuple{Int, Int}, 
+                                  center::Complex{Float64}=0.0+0.0im)
+    step = width / ngrid[2]
+    height = step * ngrid[1]
+    size = (width, height)
+    leftup = center + (im*height - width)/2
+    return RectGrid(center, size, ngrid, step, leftup)
+end
+
+
+struct SquareGrid <: AbstractGrid
     center::Complex{Float64}
     size::Float64
     ngrid::Int # ngrid^2 is the number of cells in the grid
@@ -21,57 +43,69 @@ struct Grid
 end
 
 
-function Grid(size, ngrid, center=0)
+function SquareGrid(size::Float64, ngrid::Int, 
+                    center::Complex{Float64}=0.0+0.0im)
     step = size/ngrid
     leftup = center + (im-1)*size/2
-    return Grid(center, size, ngrid, step, leftup)
+    return SquareGrid(center, size, ngrid, step, leftup)
 end
 
 
-Grid(cell::AbstractCell, ngrid) = Grid(cell.size, ngrid, cell.center)
+SquareGrid(cell::Cell, ngrid::Int) = SquareGrid(cell.size, ngrid, cell.center)
 
 
 """
-    get_index_leftup(grid::Grid, i, j)
+    get_index_leftup(grid::SquareGrid, i, j)
 
 Returns the complex coordinate of the upper left corner of the cell from the `i`-th row and `j`-th column.
 """
-function get_index_leftup(grid::Grid, i, j)
+function get_index_leftup(grid::AbstractGrid, i, j)
     return grid.leftup + (j-1)*grid.step - (i-1)*grid.step*im
 end
 
 
 """
-    get_index_center(grid::Grid, i, j)
+    get_index_center(grid::AbstractGrid, i, j)
 
 Returns the complex coordinate of the center of the cell from the `i`-th row and `j`-th column.
 """
-function get_index_center(grid::Grid, i, j)
+function get_index_center(grid::AbstractGrid, i, j)
     return get_index_leftup(grid, i, j) + (1-im)*grid.step/2
 end
 
 
 """
-    Base.getindex(grid::Grid, i::Int, j::Int)
+    Base.getindex(grid::AbstractGrid, i::Int, j::Int)
 
 Returns the cell from the `i`-th row and `j`-th column.
 """
-function Base.getindex(grid::Grid, i::Int, j::Int)
+function Base.getindex(grid::AbstractGrid, i::Int, j::Int)
     return Cell(get_index_center(grid, i, j), grid.step)
 end
 
 
 """
-    matrix_rep(grid, n=grid.ngrid, kind=[:center or :leftup])
+    matrix_rep(grid::RectGrid, n=grid.ngrid, kind=[:center or :leftup])
 
-Returns a matrix composed of the complex coordinates of the cells from `grid`. They can be either centers or upper left corners depending on `kind` argument.
-
-`n` argument tells where to stop: signature of resulting matrix is `(n, n)`. 
+See also: [`matrix_rep!`](@ref)
 """
-function matrix_rep(grid::Grid, n=grid.ngrid; kind=:center)
-    matrix = zeros(Complex{Float64}, (n, n))
-    for i in 1:n
-        for j in 1:n
+function matrix_rep(grid::RectGrid, n=grid.ngrid; kind=:center)
+    matrix = zeros(Complex{Float64}, n)
+    matrix_rep!(matrix, grid, n, kind=kind)
+    return matrix
+end
+
+
+"""
+    matrix_rep!(matrix, grid::RectGrid, n=grid.ngrid; kind=[:center or :leftup])
+
+Fills the `matrix` with the complex coordinates of the cells from `grid`. They can be either centers or upper left corners depending on `kind` argument.
+
+`n` argument tells where to stop: signature of resulting matrix is equal to `n`. 
+"""
+function matrix_rep!(matrix, grid::RectGrid, n=grid.ngrid; kind=:center)
+    for i in 1:n[1]
+        for j in 1:n[2]
             if kind == :center
                 matrix[i, j] = get_index_center(grid, i, j)
             elseif kind == :leftup
@@ -79,12 +113,29 @@ function matrix_rep(grid::Grid, n=grid.ngrid; kind=:center)
             end
         end
     end
+end
+
+
+"""
+    matrix_rep(grid::SquareGrid, n=grid.ngrid, kind=[:center or :leftup])
+
+See also: [`matrix_rep!`](@ref)
+"""
+function matrix_rep(grid::SquareGrid, n=grid.ngrid; kind=:center)
+    matrix = zeros(Complex{Float64}, (n, n))
+    matrix_rep!(matrix, grid, n, kind=kind)
     return matrix
 end
 
 
-"See also: [`matrix_rep`](@ref)"
-function matrix_rep!(matrix, grid::Grid, n=grid.ngrid; kind=:center)
+"""
+    matrix_rep!(matrix, grid::SquareGrid, n=grid.ngrid; kind=[:center or :leftup])
+
+Fills the `matrix` with the complex coordinates of the cells from `grid`. They can be either centers or upper left corners depending on `kind` argument.
+
+`n` argument tells where to stop: signature of resulting matrix is `(n, n)`. 
+"""
+function matrix_rep!(matrix, grid::SquareGrid, n=grid.ngrid; kind=:center)
     for i in 1:n
         for j in 1:n
             if kind == :center
