@@ -154,7 +154,7 @@ function update_cell!(cell::CellNode, star::Star)
     M = cell.mass
     cell.mass += star.mass
     cell.pos *= M / cell.mass
-    cell.pos += star.pos / cell.mass 
+    cell.pos += star.mass * star.pos / cell.mass 
 end
 
 
