@@ -33,6 +33,13 @@ function RectGrid(width::Float64, ngrid::Tuple{Int, Int},
     return RectGrid(center, size, ngrid, step, leftup)
 end
 
+RectGrid(;
+    width::Float64, 
+    nrows::Int, 
+    ncols::Int, 
+    center::Complex{Float64}=0.0+0.0im
+) = RectGrid(width, (nrows, ncols), center)
+
 
 struct SquareGrid <: AbstractGrid
     center::Complex{Float64}

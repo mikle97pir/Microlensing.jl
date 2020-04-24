@@ -16,17 +16,25 @@ using Microlensing # importing the package
 
 ```julia
 using Plots # the standard library for plotting
-using Random; Random.seed!(0) # fixing the seed to make the results consistent
+using Random
 ```
 
 Let us generate 200 stars uniformly distributed in a circle of radius 15 (measured in solar Einstein radii). The masses of all stars are equal to the mass of the Sun by default.
 
 
 ```julia
-stars = generate_stars_ell(200, 15)
-masses = [star.mass for star in stars]
-positions = [star.pos for star in stars]
-scatter(positions, aspect_ratio=1, legend=false, size=(1024, 1024))
+nstars = 200
+rad = 15.
+
+Random.seed!(0); stars = generate_stars_ell(nstars, rad)
+
+scatter(
+    [star.pos for star in stars], 
+    aspect_ratio = 1, 
+    legend = false, 
+    size = (1024, 1024),
+    format = :svg
+)
 ```
 
 
@@ -40,13 +48,22 @@ It is not hard to compute the critical curves and the caustics. We choose `E = 1
 
 
 ```julia
-crit_curves = calc_crit_curves(masses, positions, 1., 1.)
-caustics = calc_caustics(masses, positions, 1., 1., crit_curves)
+E = 1.
+Λ = 1.
+
+crit_curves = calc_crit_curves(stars, E=E, Λ=Λ)
+caustics = calc_caustics(stars, crit_curves, E=E, Λ=Λ)
 ```
 
 
 ```julia
-P = plot(legend=false, aspect_ratio=1, size=(1024, 1024))
+P = plot(
+    legend = false, 
+    aspect_ratio = 1, 
+    size = (1024, 1024),
+    format = :svg
+)
+
 for curve in crit_curves
     plot!(P, curve)
 end
@@ -62,7 +79,15 @@ P
 
 
 ```julia
-P = plot(legend=false, aspect_ratio=1, size=(1024,1024), xlim=(-7.5,7.5), ylim=(-7.5,7.5))
+P = plot(
+    legend = false, 
+    aspect_ratio = 1, 
+    size = (1024,1024), 
+    xlim = (-7.5,7.5), 
+    ylim = (-7.5,7.5), 
+    format = :svg
+)
+
 for curve in caustics
     plot!(P, curve)
 end
@@ -76,14 +101,34 @@ P
 
 
 
-Let us prepare for the computing of the magnification map. We are going to shoot the rays from a `40x40` square. It is big enough to contain all the critical curves. The image square will be `15x15`, because it contains all the caustics. We choose `resol=1024`, which means that the resolution of the resulting map will be `1024x1024`. The whole number of rays will be `ngrid^2*nshare^2*nint^2`.
+Let us prepare for the computing of the magnification map. We are going to shoot the rays from a `40x40` square. It is big enough to contain all the critical curves. The image square will be `15x15`, because it contains all the caustics. The width is measured in Einstein radii of the Sun.
+
+We set `nrows = ncols = 4096` for `domain`, which means that the whole number of rays is equal to `nrows*ncols*nshare*nint = 4096*4096*4*4`. Actually, the domain is a rectangle with `height = width / ncols * nrows`. Similarly, the `nrows = ncols = 1024` for the image mean that the resulting map will have resolution `1024x1024`.
 
 
 ```julia
-domain = Cell(0., 40.)
-image = Cell(0., 15.)
-tree = build_tree(stars, 40.)
-problem = NumMLProblem(T=tree, nstars=200, ngrid=4096, nshare=4, nint=4, resol=1024, E=1., Λ=1.)
+domain = RectGrid(
+    width = 40.,
+    nrows = 4096,
+    ncols = 4096
+)
+
+image = RectGrid(
+    width = 15.,
+    nrows = 1024,
+    ncols = 1024
+)
+
+tree = build_tree(stars, width=2*rad)
+
+problem = NumMLProblem(
+    T = tree,
+    nstars = nstars,
+    nshare = 4,
+    nint = 4,
+    E = E,
+    Λ = Λ
+)
 ```
 
 
@@ -93,7 +138,16 @@ mag = calc_mag(problem, domain, image)
 
 
 ```julia
-heatmap(log.(mag), aspect_ratio=1, legend=false, yflip=true, axis=false, grid=false, size=(1024, 1024))
+heatmap(
+    log.(mag), 
+    aspect_ratio=1, 
+    legend=false, 
+    yflip=true, 
+    axis=false, 
+    grid=false, 
+    size=reverse(size(mag)), 
+    format=:svg
+)
 ```
 
 
@@ -119,13 +173,13 @@ addprocs() # adds all the cores
 
 
 ```julia
-crit_curves = par_calc_crit_curves(masses, positions, 1., 1.)
-caustics = calc_caustics(masses, positions, 1., 1., crit_curves) # it is fast enough on a single core
+par_crit_curves = par_calc_crit_curves(stars, E=E, Λ=Λ)
+caustics = calc_caustics(stars, crit_curves, E=E, Λ=Λ) # it is fast enough on a single core
 ```
 
 
 ```julia
-mag = par_calc_mag(problem, domain, image) # the progress bar does not work yet
+par_mag = par_calc_mag(problem, domain, image)
 ```
 
 ## Documentation

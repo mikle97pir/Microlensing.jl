@@ -4,29 +4,41 @@ addprocs()
 using Test
 using Random
 
-Random.seed!(0)
-stars = @test_logs generate_stars_ell(50, 6)
-masses = [star.mass for star in stars]
-positions = [star.pos for star in stars]
+nstars = 50
+rad = 6.
+E = 1.
+Λ = 1.
 
-crit_curves = @test_logs calc_crit_curves(masses, positions, 1., 1.)
-caustics = @test_logs calc_caustics(masses, positions, 1., 1., crit_curves)
+Random.seed!(0); stars = @test_logs generate_stars_ell(nstars, rad)
 
-par_crit_curves = @test_logs par_calc_crit_curves(masses, positions, 1., 1.)
+crit_curves = @test_logs calc_crit_curves(stars, E=E, Λ=Λ)
+caustics = @test_logs calc_caustics(stars, crit_curves, E=E, Λ=Λ)
+
+par_crit_curves = @test_logs par_calc_crit_curves(stars, E=E, Λ=Λ)
 @test crit_curves == par_crit_curves
 
-tree = @test_logs build_tree(stars, 24.)
-problem = @test_logs NumMLProblem(
-    T = tree, 
-    nstars = 50, 
-    nshare = 4, 
-    nint = 4, 
-    E = 1.0, 
-    Λ = 1.0
+domain = @test_logs RectGrid(
+    width=24.,
+    nrows = 512,
+    ncols = 512
 )
 
-domain = @test_logs RectGrid(24., (512, 512))
-image = @test_logs RectGrid(15., (512, 512))
+image = @test_logs RectGrid(
+    width=15.,
+    nrows = 512,
+    ncols = 512
+)
+
+tree = @test_logs build_tree(stars, width = 2*rad)
+
+problem = @test_logs NumMLProblem(
+    T = tree, 
+    nstars = nstars, 
+    nshare = 4, 
+    nint = 4, 
+    E = E, 
+    Λ = Λ
+)
 
 mag = @test_logs calc_mag(problem, domain, image)
 par_mag = @test_logs par_calc_mag(problem, domain, image)

@@ -1,20 +1,4 @@
 """
-    break_into_ranges(n::Int, nranges::Int)
-
-Breaks the range `1:n` into a union of `nranges` ranges `1:x1`, `(x1+1):x2`, ..., `(xk+1):n`. Sizes of the resulting ranges cannot differ by more than 1. It is used by the [`par_calc_mag`](@ref) function to split the task between the workers.
-"""
-function break_into_ranges(n::Int, nranges::Int)
-    x = div(n, nranges)
-    y = x + 1
-    a = n - nranges*x
-    b = nranges - a
-    aranges = [(1+(i-1)*y):(i*y) for i in 1:a]
-    branges = [(a*y + 1 + (i-1)*x):(a*y + i*x) for i in 1:b]
-    return vcat(aranges, branges)
-end
-
-
-"""
     range_calc_mag!(mag, r::UnitRange{Int}, P::NumMLProblem, domain::Cell, image::Cell, channel::RemoteChannel{Channel{Bool}})
 
 Computes the magnification map for a part of the set of rays (with row numbers from the range `r`) and adds it to `mag`. It is used by [`par_calc_mag`](@ref) to do a part of the job on one of the workers. The `channel` is used to transmit information about the calculation progress. 
