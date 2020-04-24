@@ -4,14 +4,12 @@ os:
   - linux
 
 julia:
-  - 1.0
-  - 1.2
   - 1.4
 
 jobs:
   include:
     - stage: "Documentation"
-      julia: 1.2
+      julia: 1.4
       os: linux
       script:
         - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd()));

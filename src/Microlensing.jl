@@ -2,6 +2,7 @@ module Microlensing
 
     using Distributed
     using SharedArrays
+    using DistributedArrays
     import AbstractTrees
     using AbstractTrees: print_tree
     using DataStructures: Stack, top, pop!, push!
@@ -11,6 +12,7 @@ module Microlensing
     using Random
     using LinearAlgebra: dot
     using ProgressMeter
+    using JLD
 
     #### for distributions.jl
     using Distributions: @check_args, @distr_support
@@ -19,9 +21,10 @@ module Microlensing
     import Statistics: mean, quantile, var
     import StatsBase: params
 
-    export Star, Power, Cell, NumMLProblem
-    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag,  par_calc_mag, normalize_mag, calc_crit_curves, par_calc_crit_curves, calc_caustics
+    export Star, Power, RectGrid, NumMLProblem
+    export generate_stars_rect, generate_stars_ell, build_tree, calc_mag,  par_calc_mag, calc_crit_curves, par_calc_crit_curves, calc_caustics
 
+    include("utils.jl")
     include("star-field/star-field.jl")
     include("grids-and-cells.jl")
     include("cell-trees.jl")
@@ -30,4 +33,4 @@ module Microlensing
     include("caustics.jl")
     include("parallel-caustics.jl")
 
-end # module
+end

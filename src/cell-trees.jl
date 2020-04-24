@@ -154,7 +154,7 @@ function update_cell!(cell::CellNode, star::Star)
     M = cell.mass
     cell.mass += star.mass
     cell.pos *= M / cell.mass
-    cell.pos += star.pos / cell.mass 
+    cell.pos += star.mass * star.pos / cell.mass 
 end
 
 
@@ -268,21 +268,6 @@ function update_cell_multipoles!(cell::CellNode, child::CellNode,
 
 end
 
-"""
-    calc_binomials(order)
-
-Computes binomials. Returns matrix of signature `(order, order)`, `binomials[i, j]` should be equal to `binomial(j-1, i-1)`.
-"""
-function calc_binomials(order)
-    binomials = zeros(Int, order, order)
-    for i in 0:(order-1)
-       for j in 0:i
-           binomials[j+1, i+1] = binomial(i, j)
-       end
-    end
-    return binomials
-end
-
 
 """
     calc_multipoles!(T::CellTree)
@@ -298,7 +283,7 @@ function calc_multipoles!(T::CellTree)
     binomials = calc_binomials(T.order)
     
     while !isempty(S)
-        cell = top(S)
+        cell = first(S)
         if cell.nstars > 1
             if !cell.is_visited
                 for child in cell.children
@@ -330,19 +315,18 @@ end
 
 
 """
-    build_tree(stars, size, order=6)
+    build_tree(stars::Vector{Star}; width::Float64, order::Int=6)
 
 Creates `CellTree` from a given array of stars. The root is centered at zero. 
 
 `order` represents the highest multipole degree taken into account.
 """
-function build_tree(stars, size, order=6)
-    T = CellTree(size, order)
+function build_tree(stars::Vector{Star}; width::Float64, order::Int=6)
+    T = CellTree(width, order)
     for star in stars
         add_star!(T, star)
     end
     calc_multipoles!(T)
     return T
 end
-
 

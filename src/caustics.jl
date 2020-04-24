@@ -1,23 +1,4 @@
 """
-    simple_newton(f, ∂f, init)
-
-Finds the root of the complex function `f` near the initial value `init`. `∂f` is the derivative of `f`. The function is a straightforward implementation of Newton method.
-"""
-function simple_newton(f, ∂f, init)
-    T = init
-    T_prev = init + 1.
-    while T ≉ T_prev
-        T_prev = T
-        T = T_prev - f(T_prev)/∂f(T_prev)
-        if isnan(T)
-            error("The Newton method diverged. Try to decrease δs, decrease rate or increase nsteps. You may also try another root finder.")
-        end
-    end
-    return T
-end
-
-
-"""
     find_corrections(masses, positions, δs, E, Λ)
 
 Finds the approximate positions of the `2*nstars` roots of the jacobian, when all the masses are multiplied by a small number `δs`. The output arrays `init1` and `init2` should be used for the function [`find_start_roots`](@ref).
@@ -143,7 +124,7 @@ end
 """
     homotopize_and_remember(t_start, s_start, s_finish, homotopy, rate, lim_func, find_root)
 
-Does the same as [`homotopize_and_ramember!`](@ref), but creates `t_list` and s_list` itself and returns `t_list`.
+Does the same as [`homotopize_and_remember!`](@ref), but creates `t_list` and s_list` itself and returns `t_list`.
 
 See also: [`calc_crit_curves`](@ref), [`homotopy_step`](@ref).
 """
@@ -245,23 +226,6 @@ end
 
 
 """
-    check_for_duplicates(array)
-
-Returns `true` if the `array` contains approximate(`≈`) duplicates. Else returnes `false`.
-"""
-function check_for_duplicates(array)
-    for i in 1:length(array)
-        for j in (i+1):length(array)
-            if array[i] ≈ array[j]
-                return true
-            end
-        end
-    end
-    return false
-end 
-
-
-"""
     duplicate_warning_crit_curves(crit_curves)
 
 Prints a warning if there are roots which glued to each other during the angle-changing homotopy.
@@ -289,20 +253,22 @@ end
 
 
 """
-    calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
+    calc_crit_curves(stars::Vector{Star}; E, Λ, δs=1e-6, rate=0.25, nsteps=200, find_root=simple_newton)
 
 Normally returns a `Vector{Vector{Complex{Float64}}}`, which consists of vectors of points lying on the critical curves.
 
 # Arguments
-- `masses`: the array containing the masses of the stars .
-- `positions`: the array containing the complex coordinates of the stars.
+- `stars`: the array of stars.
 - `E`, `Λ`: the lens parameters describing the external shear.
 - `δs`: the starting parameter of the mass-changing homotopy; should be a small real number.
 - `rate`: increasing this parameter effectively increases the adaptive step.
 - `nsteps`: the minimal number of steps in the angle-changing homotopy; you should increase it if you want smoother curves.
 - `find_root`: the root finder; its argumetns should be a complex function `f`, its derivative `∂f` and the initial approximation `init`.
 """
-function calc_crit_curves(masses, positions, E, Λ, δs=1e-6, rate=0.1, nsteps=500, find_root=simple_newton)
+function calc_crit_curves(stars::Vector{Star}; E, Λ, δs=1e-6, rate=0.1, nsteps=500, find_root=simple_newton)
+
+    masses = [star.mass for star in stars]
+    positions = [star.pos for star in stars]
     roots = evaluate_mass_homotopy(masses, positions, E, Λ, δs, rate, find_root)
     duplicate_warning_roots(roots)
     crit_curves = evaluate_angle_homotopy(roots, masses, positions, E, Λ, rate, nsteps, find_root)
@@ -312,19 +278,19 @@ end
 
 
 """
-    calc_caustics(masses, positions, E, Λ, crit_curves)
+    calc_caustics(stars::Vector{Star}, crit_curves; E, Λ)
 Computes the caustics by given critical curves `crit_curves`. 
 
 See also: [`calc_crit_curves`](@ref). 
 """
-function calc_caustics(masses, positions, E, Λ, crit_curves)
+function calc_caustics(stars::Vector{Star}, crit_curves; E, Λ)
     caustics = Vector{Vector{Complex{Float64}}}(undef, 0)
     @showprogress 1 "Computing caustics..." for curve in crit_curves
         caustic = similar(curve)
         @showprogress 1 "Computing points on a caustic..." for (j, point) in enumerate(curve)
             res = A(E, Λ)*point + B(E, Λ)*conj(point)
-            for k in 1:length(masses)
-                res -= masses[k]*(point-positions[k])/abs2(point-positions[k])
+            for star in stars
+                res -= star.mass*(point-star.pos)/abs2(point-star.pos)
             end
             caustic[j] = res
         end

@@ -2,10 +2,8 @@
 # Fields
 - `T::CellTree`: normally is created with the [`build_tree`](@ref) function.
 - `nstars::Int`: number of stars in simulation.
-- `ngrid::Int`: `ngrid^2` is the number of the first level cells. For them the "go down the tree and find the right nodes" part of the computation is excecuted completely.
 - `nshare::Int`: `nshare^2` is the number of the second level subcells of a first level cell. For them the computation is complete, but they all share the same tree structure of the first level cell containing them.
 - `nint::Int`: `nint^2` is the number of the third level subcells of a second level cell. For them the algorithm attentively takes care of the stars located near the corresponding first level cell, but the impact of all other stars is interpolated.
-- `resol::Int`: `resol×resol` is the resolution of the resulting magnification map.
 - `E::Float64`: first parameter of the shear.
 - `Λ::Float64`: second parameter of the shear.
 - `δ::Float64`: the precision parameter. Higher `δ` - higher precision!
@@ -13,10 +11,8 @@
 @with_kw struct NumMLProblem
     T::CellTree
     nstars::Int
-    ngrid::Int
-    nshare::Int = 8
-    nint::Int = 8
-    resol::Int
+    nshare::Int = 4
+    nint::Int = 4
     E::Float64 = 1.
     Λ::Float64 = 1.
     δ::Float64 = 0.8
@@ -36,7 +32,7 @@ function calc_far_sums!(far_sums, cell::Cell, P::NumMLProblem,
 
     nshare = P.nshare
     push!(stack, P.T.root)
-    grid = Grid(cell, nshare)
+    grid = SquareGrid(cell, nshare)
     nnstars = 0
 
     while !isempty(stack)
@@ -137,27 +133,30 @@ end
 
 
 """
-    find_cell(pos, imsize, nimgrid)
+    find_cell(pos, image::RectGrid)
 
 By the position `pos` of a point in the image plane finds the indicies of an image grid cell containing this point.
 """
-function find_cell(pos, imsize, nimgrid)
-    step = imsize/nimgrid
+function find_cell(pos, image::RectGrid)
     x = pos.re
     y = pos.im
-    i = ceil(Int, (imsize/2-y)/step)
-    j = ceil(Int, (x+imsize/2)/step)
-    return i, j
+    Lx = image.leftup.re
+    Ly = image.leftup.im
+    step = image.step
+    u = ceil(Int, (Ly-y)/step + 0.5)
+    v = ceil(Int, (x-Lx)/step + 0.5)
+    return u, v
 end
 
 
+
 """
-    update_mag!(mag, lense, image_grid::Grid,
+    update_mag!(mag, lense, image::RectGrid,
                      P::NumMLProblem)
 
 Updates the magnification map `mag` taking into account the lense map `lense` computed for all the rays from a first level cell.
 """
-function update_mag!(mag, lense, image_grid::Grid,
+function update_mag!(mag, lense, image::RectGrid,
                      P::NumMLProblem)
 
     nshare, nint = P.nshare, P.nint
@@ -165,10 +164,8 @@ function update_mag!(mag, lense, image_grid::Grid,
     for i in 1:nshare*nint
         for j in 1:nshare*nint
             pos = lense[i, j]
-            imsize = image_grid.size
-            nimgrid = image_grid.ngrid
-            u, v = find_cell(pos, imsize, nimgrid)
-            if (1 <= u <= nimgrid) & (1 <= v <= nimgrid)
+            u, v = find_cell(pos, image)
+            if (1 <= u <= image.ngrid[1]) & (1 <= v <= image.ngrid[2])
                 mag[u, v] += 1
             end
         end
@@ -178,30 +175,40 @@ end
 
 
 """
-    normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
-Normalizes the magnification map in such a way that magnification is equal to 1 on the infinity.
-"""
-function normalize_mag(mag, P::NumMLProblem, domain::Cell, image::Cell)
-    nrays = P.ngrid^2*P.nshare^2*P.nint^2
-    mult = nrays/(P.resol^2)*(image.size^2/domain.size^2)*(1/abs(P.Λ))
-    return mag/mult
+    update_mag!(mag::DArray, lense, image::RectGrid,
+                     P::NumMLProblem)
+
+A method of [`update_mag!`](@ref) for a distributed `mag`. Updates only the `mag.localpart` on every worker.
+""" 
+function update_mag!(mag::DArray, lense, image::RectGrid,
+                     P::NumMLProblem)
+
+    nshare, nint = P.nshare, P.nint
+
+    for i in 1:nshare*nint
+        for j in 1:nshare*nint
+            pos = lense[i, j]
+            u, v = find_cell(pos, image)
+            if (1 <= u <= image.ngrid[1]) & (1 <= v <= image.ngrid[2])
+                mag.localpart[u, v, 1] += 1 # here is the only difference
+            end
+        end
+    end
+
 end
 
 
 """
-    calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+    calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid)
 
 Just computes the magnification map. Output is normalized in such a way that the magnification is equal to 1 at the infinity.
 """
-function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
+function calc_mag(P::NumMLProblem, domain::RectGrid, image::RectGrid)
 
-    ngrid, nshare, nint = P.ngrid, P.nshare, P.nint
-    E, Λ = P.E, P.Λ
+    mag = zeros(Int, image.ngrid)
 
-    mag = zeros(Int, (P.resol, P.resol))
-
-    s_sig = (nshare + 1, nshare + 1)
-    si_sig = (nshare*nint, nshare*nint)
+    s_sig = (P.nshare + 1, P.nshare + 1)
+    si_sig = (P.nshare*P.nint, P.nshare*P.nint)
 
     stack = Stack{CellNode}()
     near_stars = Vector{Star}(undef, P.nstars)
@@ -216,18 +223,19 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
 
     lense = zeros(Complex{Float64}, si_sig)
 
-    domain_grid = Grid(domain, ngrid)
-    image_grid = Grid(image, P.resol)
+    progress_bar = Progress(
+        domain.ngrid[1]*domain.ngrid[2], 
+        "Shooting rays..."
+    )
 
-    progress_bar = Progress(ngrid^2, "Shooting rays...")
+    for i in 1:domain.ngrid[1]
+        for j in 1:domain.ngrid[2]
 
-    for i in 1:ngrid
-        for j in 1:ngrid
-            cell = domain_grid[i, j]
+            cell = domain[i, j]
 
             nnstars = calc_far_sums!(far_sums, cell, P, near_stars, stack)
 
-            int_grid = Grid(cell, nshare*nint)
+            int_grid = SquareGrid(cell, P.nshare*P.nint)
             real_fs .= real.(far_sums)
             imag_fs .= imag.(far_sums)
 
@@ -238,10 +246,10 @@ function calc_mag(P::NumMLProblem, domain::Cell, image::Cell)
             calc_near_sums!(int_near_sums, near_stars, 
                             nnstars, P, int_grid_mat)
 
-            @. lense = E*Λ*real(int_grid_mat) + E*imag(int_grid_mat)*im
+            @. lense = P.E*P.Λ*real(int_grid_mat) + P.E*imag(int_grid_mat)*im
             @. lense = lense - int_far_sums - int_near_sums
 
-            update_mag!(mag, lense, image_grid, P)
+            update_mag!(mag, lense, image, P)
 
             fill!(far_sums, 0)
             fill!(int_near_sums, 0)
