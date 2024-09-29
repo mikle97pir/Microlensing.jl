@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/212618497.svg)](https://doi.org/10.5281/zenodo.13858464)
+
 
 # Microlensing.jl
 [![Build Status](https://travis-ci.com/mikle97pir/Microlensing.jl.svg?branch=master)](https://travis-ci.com/mikle97pir/Microlensing.jl)
